@@ -26,7 +26,10 @@ import kotlin.time.Clock
 import zed.rainxch.core.domain.model.account.HostNames
 import zed.rainxch.core.domain.model.account.HostToken
 import zed.rainxch.core.domain.model.account.TokenValidation
+import zed.rainxch.core.data.crypto.TokenCipher
 import zed.rainxch.core.domain.repository.HostTokenRepository
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 class HostTokenRepositoryImpl(
     private val ksafe: KSafe,
@@ -56,6 +59,7 @@ class HostTokenRepositoryImpl(
         return cache.value.firstOrNull { it.host == key }
     }
 
+    @OptIn(ExperimentalEncodingApi::class)
     override suspend fun set(host: String, token: String, displayName: String?) {
         val key = HostNames.normalize(host)
         if (key.isBlank() || token.isBlank()) return
@@ -68,6 +72,10 @@ class HostTokenRepositoryImpl(
                 displayName = displayName?.trim()?.takeIf { it.isNotEmpty() },
                 createdAtEpochMillis = now,
             )
+            val encryptedToken =
+                TokenCipher(token.encodeToByteArray()).encrypt(token.encodeToByteArray())
+            ksafe.put(KEY_TOKEN_ENC, Base64.encode(encryptedToken))
+
             val next = cache.value.filterNot { it.host == key } + updated
             persistOrThrow(next)
         }
@@ -159,5 +167,6 @@ class HostTokenRepositoryImpl(
 
     private companion object {
         const val KEY_TOKENS_JSON = "host_tokens_v1"
+        const val KEY_TOKEN_ENC = "host_token_enc_v1"
     }
 }

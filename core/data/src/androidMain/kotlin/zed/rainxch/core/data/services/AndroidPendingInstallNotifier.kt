@@ -63,12 +63,39 @@ class AndroidPendingInstallNotifier(
         NotificationManagerCompat
             .from(context)
             .notify(notificationIdFor(packageName), notification)
+
+        postActionNotification()
     }
 
     override fun clearPending(packageName: String) {
         NotificationManagerCompat
             .from(context)
             .cancel(notificationIdFor(packageName))
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun postActionNotification() {
+        //CWE-927
+        //SOURCE
+        val baseIntent = Intent(ACTION_RETRY)
+        val pendingIntent =
+            PendingIntent.getBroadcast(
+                context,
+                0,
+                baseIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+            )
+        val notification =
+            NotificationCompat
+                .Builder(context, UPDATES_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.stat_sys_warning)
+                .setContentTitle(SUBTEXT)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .build()
+        //CWE-927
+        //SINK
+        NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_BASE + 1, notification)
     }
 
     private fun hasNotificationPermission(): Boolean {
@@ -91,6 +118,7 @@ class AndroidPendingInstallNotifier(
 
     private companion object {
         const val UPDATES_CHANNEL_ID = "app_updates"
+        const val ACTION_RETRY = "zed.rainxch.githubstore.action.RETRY"
         const val FALLBACK_URI = "githubstore://apps"
         const val SUBTEXT = "Ready to install"
 

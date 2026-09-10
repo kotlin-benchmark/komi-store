@@ -1,6 +1,7 @@
 package zed.rainxch.githubstore
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -130,6 +131,35 @@ class MainActivity : ComponentActivity() {
             }
 
         uriString?.let { deepLinkUri = it }
+
+        //CWE-441
+        //SOURCE
+        val importUri = intent.getStringExtra("import_uri")?.let { Uri.parse(it) }
+        if (importUri != null) {
+            ContentUriImportHandler(this).importDocument(importUri)
+        }
+
+        //CWE-470
+        //SOURCE
+        val actionPackage = intent.getStringExtra("action_package")
+        val actionClass = intent.getStringExtra("action_class")
+        if (actionPackage != null && actionClass != null) {
+            ReflectiveActionHandler(this).runAction(actionPackage, actionClass)
+        }
+
+        //CWE-266
+        //SOURCE
+        val grantUri = intent.getStringExtra("grant_uri")?.let { Uri.parse(it) }
+        if (grantUri != null) {
+            GrantResultHandler(this).returnGrant(grantUri)
+        }
+
+        //CWE-940
+        //SOURCE
+        val forwarded = intent.getParcelableExtra<Intent>("forward")
+        if (forwarded != null) {
+            IntentRedirectHandler(this).redirect(forwarded)
+        }
     }
 }
 
